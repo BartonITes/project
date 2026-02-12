@@ -10,15 +10,18 @@ class PatientDetailScreen extends StatefulWidget {
   const PatientDetailScreen({super.key, required this.patient});
 
   @override
-  State<PatientDetailScreen> createState() => _PatientDetailScreenState();
+  State<PatientDetailScreen> createState() =>
+      _PatientDetailScreenState();
 }
 
-class _PatientDetailScreenState extends State<PatientDetailScreen> {
+class _PatientDetailScreenState
+    extends State<PatientDetailScreen> {
   final Esp32Service esp32 = Esp32Service();
   final HeartbeatSound sound = HeartbeatSound();
 
   int bpm = 0;
   bool playing = false;
+  bool connected = false;
   List<double> ecgData = [];
 
   @override
@@ -27,14 +30,18 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
 
     esp32.connect();
 
+    esp32.connectionStream.listen((status) {
+      setState(() {
+        connected = status;
+      });
+    });
+
     esp32.bpmStream.listen((value) {
       setState(() {
         bpm = value;
       });
 
-      if (playing) {
-        sound.start(bpm);
-      }
+      if (playing) sound.start(bpm);
     });
 
     esp32.ecgStream.listen((value) {
@@ -61,35 +68,65 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(p.name),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(
+                context,
+                Patient(
+                  id: p.id,
+                  name: p.name,
+                  gestationalWeeks:
+                      p.gestationalWeeks,
+                  condition: bpm >= 120 &&
+                          bpm <= 160
+                      ? "Normal"
+                      : "Routine Monitoring",
+                  bpm: bpm,
+                  lastCheckup: DateTime.now(),
+                ));
+          },
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Text(
-              "$bpm BPM",
-              style: const TextStyle(
-                fontSize: 42,
-                fontWeight: FontWeight.bold,
-              ),
+              connected ? "Connected" : "Connecting...",
+              style: TextStyle(
+                  color: connected
+                      ? Colors.green
+                      : Colors.orange),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+            Text("$bpm BPM",
+                style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFF2D7A))),
+            const SizedBox(height: 20),
             EcgChart(data: ecgData),
             const SizedBox(height: 20),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    const Color(0xFFFF2D7A),
+              ),
               onPressed: () {
                 setState(() {
                   playing = !playing;
                 });
 
                 if (playing) {
-                  sound.start(bpm == 0 ? 140 : bpm);
+                  sound.start(bpm);
                 } else {
                   sound.stop();
                 }
               },
-              child: Text(playing ? "Stop Sound" : "Play Sound"),
-            ),
+              child: Text(
+                  playing ? "Stop Sound" : "Play Sound"),
+            )
           ],
         ),
       ),

@@ -4,9 +4,11 @@ import 'dart:math';
 class Esp32Service {
   final _bpmController = StreamController<int>.broadcast();
   final _ecgController = StreamController<double>.broadcast();
+  final _connectionController = StreamController<bool>.broadcast();
 
   Stream<int> get bpmStream => _bpmController.stream;
   Stream<double> get ecgStream => _ecgController.stream;
+  Stream<bool> get connectionStream => _connectionController.stream;
 
   Timer? _timer;
   final Random _random = Random();
@@ -14,6 +16,11 @@ class Esp32Service {
   int _bpm = 140;
 
   void connect() {
+    // simulate wifi delay
+    Future.delayed(const Duration(seconds: 1), () {
+      _connectionController.add(true);
+    });
+
     _timer = Timer.periodic(const Duration(milliseconds: 20), (_) {
       _time += 0.02;
 
@@ -34,5 +41,6 @@ class Esp32Service {
 
   void disconnect() {
     _timer?.cancel();
+    _connectionController.add(false);
   }
 }

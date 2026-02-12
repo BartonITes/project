@@ -7,7 +7,6 @@ class HeartbeatSound {
 
   void start(int bpm) {
     stop();
-
     final interval = Duration(milliseconds: (60000 / bpm).round());
 
     _timer = Timer.periodic(interval, (_) async {

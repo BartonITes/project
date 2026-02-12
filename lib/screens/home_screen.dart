@@ -3,6 +3,7 @@ import '../models/patient.dart';
 import '../services/patient_repository.dart';
 import 'add_patient_screen.dart';
 import 'patient_detail_screen.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,47 +42,84 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFFFF4F8),
       appBar: AppBar(
         title: const Text("Fetal Monitor"),
+        actions: [
+          TextButton.icon(
+            onPressed: () async {
+              final patient = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AddPatientScreen()),
+              );
+              if (patient != null) addPatient(patient);
+            },
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text("Add Patient",
+                style: TextStyle(color: Colors.white)),
+          )
+        ],
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: patients.length,
-        itemBuilder: (context, index) {
+        itemBuilder: (_, index) {
           final p = patients[index];
+
           return Card(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            elevation: 4,
+                borderRadius: BorderRadius.circular(16)),
             child: ListTile(
               title: Text(p.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle:
-                  Text("Gestational Age: ${p.gestationalWeeks} weeks"),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Gestational age: ${p.gestationalWeeks} weeks"),
+                  Text(
+                      "Last checkup: ${DateFormat.yMMMd().add_jm().format(p.lastCheckup)}"),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text(p.condition),
+                        backgroundColor:
+                            Colors.green.shade100,
+                      ),
+                      const SizedBox(width: 8),
+                      Chip(
+                        label: Text("${p.bpm} BPM"),
+                        backgroundColor:
+                            Colors.pink.shade100,
+                      )
+                    ],
+                  )
+                ],
+              ),
               trailing: IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: () => deletePatient(p.id),
               ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PatientDetailScreen(patient: p),
-                ),
-              ),
+              onTap: () async {
+                final updatedPatient =
+                    await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          PatientDetailScreen(patient: p)),
+                );
+
+                if (updatedPatient != null) {
+                  patients[index] = updatedPatient;
+                  repo.save(patients);
+                  setState(() {});
+                }
+              },
             ),
           );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFFF2D7A),
-        child: const Icon(Icons.add),
-        onPressed: () async {
-          final patient = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddPatientScreen()),
-          );
-          if (patient != null) addPatient(patient);
         },
       ),
     );
